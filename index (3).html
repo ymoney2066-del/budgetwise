@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BudgetWise — Asia Edition</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --earn:#8B5CF6;--spend:#F43F5E;--save:#10B981;
+  --earn-light:#F5F3FF;--spend-light:#FFF1F3;--save-light:#ECFDF5;
+  --earn-dark:#5B21B6;--spend-dark:#9F1239;--save-dark:#065F46;
+  --accent:#F59E0B;
+  --bg:#F8F7FF;--card:#fff;--text:#18181B;--text2:#52525B;--text3:#A1A1AA;
+  --border:#E4E4E7;--border2:#D4D4D8;--radius:12px;--radius-lg:18px;--radius-xl:24px;
+  --nav-h:60px;
+  --grad:linear-gradient(135deg,#6D28D9 0%,#8B5CF6 40%,#EC4899 75%,#F59E0B 100%);
+}
+html{scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:80px}
+nav{display:flex;align-items:center;gap:8px;padding:0 24px;background:var(--grad);box-shadow:0 4px 20px rgba(109,40,217,0.25);position:sticky;top:0;z-index:100;height:var(--nav-h)}
+.brand{font-size:18px;font-weight:800;color:#fff;flex:1;letter-spacing:-0.3px;display:flex;align-items:center;gap:8px}
+.brand-dot{width:8px;height:8px;border-radius:50%;background:#F59E0B}
+.brand sub{font-size:10px;font-weight:400;opacity:.7;margin-left:2px}
+.nav-links{display:flex;gap:4px}
+.nav-links button{font-size:13px;padding:7px 14px;border-radius:20px;border:none;background:rgba(255,255,255,0.15);color:#fff;cursor:pointer;transition:all .2s;font-weight:600;white-space:nowrap}
+.nav-links button.active{background:rgba(255,255,255,0.9);color:#6D28D9}
+.nav-links button:hover:not(.active){background:rgba(255,255,255,0.25)}
+.hamburger{display:none;background:none;border:none;color:#fff;font-size:24px;cursor:pointer;padding:4px}
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;background:rgba(255,255,255,0.96);border-top:1px solid var(--border);justify-content:space-around;padding:8px 0 10px;box-shadow:0 -4px 20px rgba(0,0,0,0.08)}
+.mob-btn{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:10px;font-weight:600;padding:4px 14px;border-radius:10px;transition:color .15s;font-family:inherit}
+.mob-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.mob-btn.active{color:var(--earn)}
+.top-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 24px;background:rgba(255,255,255,0.85);border-bottom:1px solid var(--border);position:sticky;top:var(--nav-h);z-index:90;backdrop-filter:blur(8px)}
+.top-bar label{font-size:11px;color:var(--text2);font-weight:700;white-space:nowrap;text-transform:uppercase;letter-spacing:.5px}
+.top-bar select{font-size:13px;padding:6px 10px;border-radius:20px;border:1px solid var(--border2);background:#fff;color:var(--text);cursor:pointer;font-family:inherit;font-weight:500}
+.top-bar select:focus{outline:none;border-color:var(--earn)}
+.new-month-btn{font-size:12px;padding:6px 14px;border-radius:20px;border:1.5px solid var(--earn);background:var(--earn-light);color:var(--earn-dark);cursor:pointer;font-family:inherit;font-weight:700;transition:all .2s}
+.new-month-btn:hover{background:var(--earn);color:#fff}
+.currency-note{font-size:11px;color:var(--text3);font-style:italic;margin-left:auto}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:var(--radius-xl);padding:28px;width:340px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,0.2)}
+.modal h3{font-size:17px;font-weight:800;margin-bottom:18px}
+.modal label{display:block;font-size:11px;font-weight:700;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.modal select,.modal input{width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:10px;font-size:14px;font-family:inherit;color:var(--text);margin-bottom:14px}
+.modal select:focus,.modal input:focus{outline:none;border-color:var(--earn)}
+.modal-btns{display:flex;gap:8px;margin-top:4px}
+.modal-btns button{flex:1;padding:10px;border-radius:10px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.modal-cancel{background:var(--bg);color:var(--text2)}
+.modal-confirm{background:var(--grad);color:#fff}
+.alert-banner{display:none;align-items:center;gap:10px;padding:11px 24px;background:linear-gradient(90deg,#FFF1F3,#FFE4E8);border-bottom:2px solid #F43F5E;font-size:13px;color:#9F1239;font-weight:600}
+.alert-banner.show{display:flex}
+.alert-banner svg{width:18px;height:18px;stroke:#F43F5E;fill:none;stroke-width:2;flex-shrink:0}
+.alert-close{margin-left:auto;background:none;border:none;cursor:pointer;color:#9F1239;font-size:20px;line-height:1}
+.container{max-width:1000px;margin:0 auto;padding:24px 20px 48px}
+.page{display:none}
+.page.active{display:block;animation:fadein .25s ease}
+@keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.welcome-state{text-align:center;padding:52px 24px;background:var(--card);border-radius:var(--radius-xl);border:1px solid var(--border);margin-bottom:24px;position:relative;overflow:hidden}
+.welcome-state::before{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;border-radius:50%;background:var(--earn-light);z-index:0}
+.welcome-state::after{content:'';position:absolute;bottom:-30px;left:-30px;width:150px;height:150px;border-radius:50%;background:var(--save-light);z-index:0}
+.welcome-inner{position:relative;z-index:1}
+.welcome-icon{font-size:52px;margin-bottom:16px}
+.welcome-state h2{font-size:22px;font-weight:800;margin-bottom:10px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.welcome-state p{font-size:14px;color:var(--text2);line-height:1.75;max-width:420px;margin:0 auto 22px}
+.welcome-state button{background:var(--grad);color:#fff;border:none;padding:12px 28px;border-radius:20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.columns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:20px}
+.col-card{border-radius:var(--radius-lg);padding:18px;background:var(--card);border:1px solid var(--border);position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s}
+.col-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.08)}
+.col-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px}
+.col-card.earn::before{background:linear-gradient(90deg,#6D28D9,#8B5CF6)}
+.col-card.spend::before{background:linear-gradient(90deg,#BE123C,#F43F5E)}
+.col-card.save::before{background:linear-gradient(90deg,#065F46,#10B981)}
+.col-card.earn{background:linear-gradient(160deg,#fff 60%,var(--earn-light))}
+.col-card.spend{background:linear-gradient(160deg,#fff 60%,var(--spend-light))}
+.col-card.save{background:linear-gradient(160deg,#fff 60%,var(--save-light))}
+.col-label{font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.col-card.earn .col-label{color:var(--earn-dark)}
+.col-card.spend .col-label{color:var(--spend-dark)}
+.col-card.save .col-label{color:var(--save-dark)}
+.col-total{font-size:26px;font-weight:800;margin-bottom:14px;color:var(--text);letter-spacing:-0.5px}
+.entry-row{display:flex;gap:5px;margin-bottom:7px;align-items:center}
+.entry-row input{flex:1;font-size:13px;padding:7px 10px;border:1px solid var(--border2);border-radius:10px;background:#fff;color:var(--text);min-width:0;font-family:inherit;transition:border-color .15s}
+.entry-row input:focus{outline:none;border-color:var(--earn);box-shadow:0 0 0 3px rgba(139,92,246,0.12)}
+.del-btn{background:transparent;border:none;cursor:pointer;color:var(--text3);font-size:18px;padding:2px 5px;line-height:1;transition:all .15s;border-radius:6px}
+.del-btn:hover{color:var(--spend);background:var(--spend-light)}
+.add-btn{font-size:12px;padding:7px 10px;border-radius:10px;border:1.5px dashed var(--border2);background:transparent;color:var(--text2);cursor:pointer;width:100%;margin-top:6px;font-family:inherit;transition:all .15s;font-weight:500}
+.add-btn:hover{background:rgba(139,92,246,0.06);border-color:var(--earn);color:var(--earn-dark)}
+.summary-bar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:20px}
+.metric{border-radius:var(--radius-lg);padding:16px 18px;background:var(--card);border:1px solid var(--border)}
+.metric-label{font-size:10px;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.6px;font-weight:700}
+.metric-val{font-size:20px;font-weight:800;letter-spacing:-0.3px}
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px}
+.chart-card h3{font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text)}
+.chart-wrap{position:relative;width:100%;height:210px}
+.empty-chart{display:flex;flex-direction:column;align-items:center;justify-content:center;height:200px;color:var(--text3);font-size:13px;gap:10px;text-align:center;line-height:1.5}
+.empty-chart-icon{font-size:36px;filter:grayscale(1);opacity:.35}
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);font-weight:500}
+.legend-pill{width:12px;height:12px;border-radius:4px;flex-shrink:0}
+.goals-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:20px}
+.goals-card h3{font-size:15px;font-weight:700;margin-bottom:16px}
+.goal-item{margin-bottom:14px;padding:16px;background:var(--bg);border-radius:var(--radius);border:1px solid var(--border)}
+.goal-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.goal-name-display{font-size:14px;font-weight:700;flex:1}
+.goal-amounts{font-size:12px;color:var(--text2);font-weight:500;white-space:nowrap}
+.goal-bar-bg{height:10px;background:var(--border);border-radius:5px;overflow:hidden;margin-bottom:5px}
+.goal-bar-fill{height:100%;border-radius:5px;transition:width .4s ease}
+.goal-pct{font-size:11px;color:var(--text3);font-weight:600;margin-bottom:10px}
+.goal-fields{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:6px;align-items:center}
+.goal-fields input{font-size:12px;padding:6px 9px;border:1px solid var(--border2);border-radius:8px;font-family:inherit;color:var(--text);background:#fff;width:100%}
+.goal-fields input:focus{outline:none;border-color:var(--earn)}
+.goal-del{background:var(--spend-light);border:none;color:var(--spend-dark);cursor:pointer;border-radius:8px;padding:6px 10px;font-size:14px;font-weight:700;transition:all .15s;white-space:nowrap}
+.goal-del:hover{background:var(--spend);color:#fff}
+.add-goal-btn{font-size:13px;padding:8px 12px;border-radius:10px;border:1.5px dashed var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-family:inherit;margin-top:10px;transition:all .15s;width:100%;font-weight:500}
+.add-goal-btn:hover{background:var(--save-light);border-color:var(--save);color:var(--save-dark)}
+.tips-hero{border-radius:var(--radius-xl);padding:30px 28px;margin-bottom:22px;background:var(--grad);color:#fff;position:relative;overflow:hidden}
+.tips-hero::before{content:'💰';position:absolute;right:28px;top:50%;transform:translateY(-50%);font-size:72px;opacity:.15}
+.tips-hero h2{font-size:22px;font-weight:800;color:#fff;margin-bottom:8px}
+.tips-hero p{font-size:14px;opacity:.9;line-height:1.65;max-width:480px}
+.tips-alert{padding:13px 16px;background:var(--spend-light);border-left:4px solid var(--spend);border-radius:var(--radius);margin-bottom:18px;font-size:13px;color:var(--spend-dark);display:none;font-weight:500}
+.tips-alert.show{display:block}
+.tips-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:24px}
+.tip-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;border-bottom:3px solid transparent;transition:transform .2s,box-shadow .2s}
+.tip-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,0.09)}
+.tip-card.highlight{border:2px solid var(--spend);background:var(--spend-light)}
+.tip-badge{display:inline-block;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;margin-bottom:9px;letter-spacing:.4px}
+.tip-card h3{font-size:14px;font-weight:700;margin-bottom:6px}
+.tip-card p{font-size:13px;color:var(--text2);line-height:1.65}
+.methods-title{font-size:17px;font-weight:800;margin-bottom:14px}
+.methods-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px}
+.method-row{display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-bottom:1px solid var(--border)}
+.method-row:last-child{border-bottom:none;padding-bottom:0}
+.method-num{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0;color:#fff}
+.mn1{background:var(--earn)}.mn2{background:#D97706}.mn3{background:var(--spend)}.mn4{background:var(--save)}.mn5{background:#EC4899}
+.method-body h3{font-size:14px;font-weight:700;margin-bottom:4px}
+.method-body p{font-size:13px;color:var(--text2);line-height:1.65}
+.sheet-hero{border-radius:var(--radius-lg);padding:18px 22px;margin-bottom:18px;background:var(--earn-light);border-left:5px solid var(--earn)}
+.sheet-hero h2{font-size:16px;font-weight:800;color:var(--earn-dark);margin-bottom:4px}
+.sheet-hero p{font-size:13px;color:var(--earn);opacity:.8;line-height:1.55}
+.sheet-toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.sheet-toolbar button{font-size:13px;padding:8px 16px;border-radius:20px;border:1px solid var(--border2);background:var(--card);color:var(--text);cursor:pointer;font-family:inherit;transition:all .15s;font-weight:600}
+.sheet-toolbar button:hover{background:var(--bg)}
+.dl-btn{background:var(--grad) !important;color:#fff !important;border:none !important}
+.print-btn{background:#1E40AF !important;color:#fff !important;border:none !important}
+.sheet-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius-lg)}
+table.sheet{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+table.sheet th{background:#F4F4F8;padding:10px 12px;text-align:left;font-weight:700;border-bottom:1px solid var(--border);font-size:11px;color:var(--text2);letter-spacing:.4px;text-transform:uppercase;white-space:nowrap}
+table.sheet td{padding:0;border-bottom:1px solid var(--border)}
+table.sheet tr:last-child td{border-bottom:none}
+table.sheet td input{width:100%;padding:8px 12px;border:none;background:transparent;color:var(--text);font-size:13px;font-family:inherit}
+table.sheet td input:focus{background:#F5F3FF;outline:none}
+table.sheet td select{width:100%;padding:8px 9px;border:none;background:transparent;color:var(--text);font-size:13px;font-family:inherit;cursor:pointer}
+table.sheet tr.tr-earn{background:#FDFCFF}
+table.sheet tr.tr-spend{background:#FFFCFD}
+table.sheet tr.tr-save{background:#F9FDFB}
+table.sheet tr.tr-earn:hover{background:var(--earn-light)}
+table.sheet tr.tr-spend:hover{background:var(--spend-light)}
+table.sheet tr.tr-save:hover{background:var(--save-light)}
+table.sheet td.computed{padding:8px 12px;font-weight:600;white-space:nowrap}
+table.sheet tr.total-row td{font-weight:800;background:#F4F4F8;padding:10px 12px;border-top:2px solid var(--border2)}
+.row-del{background:transparent;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:8px 10px;width:100%;transition:color .15s;display:block}
+.row-del:hover{color:var(--spend)}
+.about-hero{border-radius:var(--radius-xl);padding:38px 30px;margin-bottom:24px;background:var(--grad);color:#fff;text-align:center;position:relative;overflow:hidden}
+.about-hero::before{content:'✨';position:absolute;left:20px;top:20px;font-size:28px;opacity:.3}
+.about-hero::after{content:'🚀';position:absolute;right:20px;bottom:20px;font-size:28px;opacity:.3}
+.about-avatar{width:84px;height:84px;border-radius:50%;background:rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;font-size:34px;margin:0 auto 16px;border:3px solid rgba(255,255,255,0.5)}
+.about-hero h1{font-size:25px;font-weight:800;color:#fff;margin-bottom:8px}
+.about-hero p{font-size:14px;opacity:.9;line-height:1.7;max-width:500px;margin:0 auto}
+.about-mission{background:var(--earn-light);border:1px solid var(--earn);border-radius:var(--radius-lg);padding:24px;margin-bottom:22px}
+.about-mission h2{font-size:17px;font-weight:800;color:var(--earn-dark);margin-bottom:10px}
+.about-mission p{font-size:14px;color:var(--earn-dark);line-height:1.8;opacity:.9}
+.about-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:22px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;text-align:center}
+.stat-num{font-size:28px;font-weight:800;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.stat-lbl{font-size:12px;color:var(--text2);margin-top:4px;font-weight:500}
+.about-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px;margin-bottom:22px}
+.about-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;transition:transform .2s}
+.about-card:hover{transform:translateY(-2px)}
+.about-card-icon{font-size:28px;margin-bottom:10px}
+.about-card h3{font-size:14px;font-weight:700;margin-bottom:7px}
+.about-card p{font-size:13px;color:var(--text2);line-height:1.7}
+.faq-section{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:22px}
+.faq-item{border-bottom:1px solid var(--border);padding:14px 0}
+.faq-item:last-child{border-bottom:none;padding-bottom:0}
+.faq-q{font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:space-between;color:var(--text);user-select:none}
+.faq-icon{font-size:20px;color:var(--earn);transition:transform .2s;font-weight:300;line-height:1}
+.faq-q.open .faq-icon{transform:rotate(45deg)}
+.faq-a{font-size:13px;color:var(--text2);line-height:1.75;margin-top:10px;display:none;padding-left:4px}
+.faq-a.open{display:block}
+footer{background:var(--card);border-top:1px solid var(--border);padding:22px;text-align:center;margin-top:20px}
+.footer-links{display:flex;justify-content:center;gap:22px;margin-bottom:10px;flex-wrap:wrap}
+footer a{color:var(--earn);text-decoration:none;font-weight:600;font-size:13px}
+footer a:hover{text-decoration:underline}
+.copy{font-size:12px;color:var(--text3)}
+@media print{nav,.top-bar,.alert-banner,.sheet-toolbar,.mobile-nav,footer,.add-btn,.del-btn,.add-goal-btn,.row-del,.welcome-state{display:none!important}.page{display:block!important}body{padding:0;background:#fff}.container{padding:10px}}
+@media(max-width:680px){
+  .columns,.summary-bar,.charts-grid{grid-template-columns:1fr}
+  .nav-links{display:none}.hamburger{display:block}
+  .mobile-nav{display:flex}
+  .goal-fields{grid-template-columns:1fr 1fr}
+  .top-bar{flex-wrap:wrap;gap:8px;padding:10px 16px}
+  .currency-note{display:none}
+}
+@media(max-width:400px){.about-stats{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav>
+  <div class="brand"><span class="brand-dot"></span>BudgetWise<sub>Asia</sub></div>
+  <div class="nav-links">
+    <button class="active" onclick="showPage('dashboard',this)">Dashboard</button>
+    <button onclick="showPage('tips',this)">Tips</button>
+    <button onclick="showPage('sheet',this)">Sheet</button>
+    <button onclick="showPage('about',this)">About</button>
+  </div>
+  <button class="hamburger" onclick="toggleMobileMenu()">&#9776;</button>
+</nav>
+<div class="mobile-nav" id="mobileNav">
+  <button class="mob-btn active" onclick="showPage('dashboard',this,true)" data-page="dashboard">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard
+  </button>
+  <button class="mob-btn" onclick="showPage('tips',this,true)" data-page="tips">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Tips
+  </button>
+  <button class="mob-btn" onclick="showPage('sheet',this,true)" data-page="sheet">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>Sheet
+  </button>
+  <button class="mob-btn" onclick="showPage('about',this,true)" data-page="about">
+    <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>About
+  </button>
+</div>
+<div class="top-bar">
+  <label>Month</label>
+  <select id="monthSelect" onchange="switchMonth()"></select>
+  <button class="new-month-btn" onclick="openMonthModal()">+ New month</button>
+  <label>Currency</label>
+  <select id="currencySelect" onchange="setCurrency()">
+    <optgroup label="South Asia">
+      <option value="NPR">🇳🇵 NPR — Nepalese Rupee</option>
+      <option value="INR">🇮🇳 INR — Indian Rupee</option>
+      <option value="PKR">🇵🇰 PKR — Pakistani Rupee</option>
+      <option value="BDT">🇧🇩 BDT — Bangladeshi Taka</option>
+      <option value="LKR">🇱🇰 LKR — Sri Lankan Rupee</option>
+      <option value="BTN">🇧🇹 BTN — Bhutanese Ngultrum</option>
+      <option value="MVR">🇲🇻 MVR — Maldivian Rufiyaa</option>
+      <option value="AFN">🇦🇫 AFN — Afghan Afghani</option>
+    </optgroup>
+    <optgroup label="East Asia">
+      <option value="CNY">🇨🇳 CNY — Chinese Yuan</option>
+      <option value="JPY">🇯🇵 JPY — Japanese Yen</option>
+      <option value="KRW">🇰🇷 KRW — South Korean Won</option>
+      <option value="TWD">🇹🇼 TWD — Taiwan Dollar</option>
+      <option value="HKD">🇭🇰 HKD — Hong Kong Dollar</option>
+      <option value="MNT">🇲🇳 MNT — Mongolian Togrog</option>
+    </optgroup>
+    <optgroup label="Southeast Asia">
+      <option value="SGD">🇸🇬 SGD — Singapore Dollar</option>
+      <option value="MYR">🇲🇾 MYR — Malaysian Ringgit</option>
+      <option value="THB">🇹🇭 THB — Thai Baht</option>
+      <option value="IDR">🇮🇩 IDR — Indonesian Rupiah</option>
+      <option value="PHP">🇵🇭 PHP — Philippine Peso</option>
+      <option value="VND">🇻🇳 VND — Vietnamese Dong</option>
+      <option value="MMK">🇲🇲 MMK — Myanmar Kyat</option>
+      <option value="KHR">🇰🇭 KHR — Cambodian Riel</option>
+      <option value="LAK">🇱🇦 LAK — Lao Kip</option>
+      <option value="BND">🇧🇳 BND — Brunei Dollar</option>
+    </optgroup>
+    <optgroup label="Central Asia">
+      <option value="KZT">🇰🇿 KZT — Kazakhstani Tenge</option>
+      <option value="UZS">🇺🇿 UZS — Uzbekistani Som</option>
+      <option value="KGS">🇰🇬 KGS — Kyrgyzstani Som</option>
+      <option value="TJS">🇹🇯 TJS — Tajikistani Somoni</option>
+      <option value="TMT">🇹🇲 TMT — Turkmenistani Manat</option>
+    </optgroup>
+    <optgroup label="West Asia / Middle East">
+      <option value="AED">🇦🇪 AED — UAE Dirham</option>
+      <option value="SAR">🇸🇦 SAR — Saudi Riyal</option>
+      <option value="QAR">🇶🇦 QAR — Qatari Riyal</option>
+      <option value="KWD">🇰🇼 KWD — Kuwaiti Dinar</option>
+      <option value="BHD">🇧🇭 BHD — Bahraini Dinar</option>
+      <option value="OMR">🇴🇲 OMR — Omani Rial</option>
+      <option value="JOD">🇯🇴 JOD — Jordanian Dinar</option>
+      <option value="ILS">🇮🇱 ILS — Israeli Shekel</option>
+      <option value="TRY">🇹🇷 TRY — Turkish Lira</option>
+      <option value="IRR">🇮🇷 IRR — Iranian Rial</option>
+      <option value="IQD">🇮🇶 IQD — Iraqi Dinar</option>
+      <option value="AMD">🇦🇲 AMD — Armenian Dram</option>
+      <option value="GEL">🇬🇪 GEL — Georgian Lari</option>
+      <option value="AZN">🇦🇿 AZN — Azerbaijani Manat</option>
+    </optgroup>
+  </select>
+  <span class="currency-note">Symbol only — values not converted</span>
+</div>
+<div class="alert-banner" id="alertBanner">
+  <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+  <span id="alertText">Warning: spending exceeds income this month!</span>
+  <button class="alert-close" onclick="document.getElementById('alertBanner').classList.remove('show')">&#215;</button>
+</div>
+<div class="modal-overlay" id="monthModal">
+  <div class="modal">
+    <h3>Add a new month</h3>
+    <label>Month</label>
+    <select id="modalMonth">
+      <option>January</option><option>February</option><option>March</option><option>April</option>
+      <option>May</option><option>June</option><option>July</option><option>August</option>
+      <option>September</option><option>October</option><option>November</option><option>December</option>
+    </select>
+    <label>Year</label>
+    <input type="number" id="modalYear" min="2000" max="2100" value="2026">
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeMonthModal()">Cancel</button>
+      <button class="modal-confirm" onclick="confirmAddMonth()">Add month</button>
+    </div>
+  </div>
+</div>
+<div class="container">
+<div class="page active" id="page-dashboard">
+  <div id="welcomeState" class="welcome-state" style="display:none">
+    <div class="welcome-inner">
+      <div class="welcome-icon">👋</div>
+      <h2>Welcome to BudgetWise!</h2>
+      <p>Your personal finance companion for Asia. Add income, expenses and savings goals — everything saves automatically in your browser.</p>
+      <button onclick="document.getElementById('welcomeState').style.display='none'">Let's get started</button>
+    </div>
+  </div>
+  <div class="columns">
+    <div class="col-card earn">
+      <div class="col-label">Earnings</div>
+      <div class="col-total" id="earn-total">0</div>
+      <div id="earn-entries"></div>
+      <button class="add-btn" onclick="addEntry('earn')">+ Add income source</button>
+    </div>
+    <div class="col-card spend">
+      <div class="col-label">Spending</div>
+      <div class="col-total" id="spend-total">0</div>
+      <div id="spend-entries"></div>
+      <button class="add-btn" onclick="addEntry('spend')">+ Add expense</button>
+    </div>
+    <div class="col-card save">
+      <div class="col-label">Saving</div>
+      <div class="col-total" id="save-total">0</div>
+      <div id="save-entries"></div>
+      <button class="add-btn" onclick="addEntry('save')">+ Add saving goal</button>
+    </div>
+  </div>
+  <div class="summary-bar">
+    <div class="metric" style="border-left:4px solid var(--earn);background:var(--earn-light)">
+      <div class="metric-label">Total income</div>
+      <div class="metric-val" id="sum-earn" style="color:var(--earn-dark)">0</div>
+    </div>
+    <div class="metric" style="border-left:4px solid var(--spend);background:var(--spend-light)">
+      <div class="metric-label">Total expenses</div>
+      <div class="metric-val" id="sum-spend" style="color:var(--spend-dark)">0</div>
+    </div>
+    <div class="metric" style="border-left:4px solid var(--save);background:var(--save-light)">
+      <div class="metric-label">Net balance</div>
+      <div class="metric-val" id="sum-net">0</div>
+    </div>
+  </div>
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3>Budget breakdown</h3>
+      <div id="pieEmpty" class="empty-chart"><div class="empty-chart-icon">🥧</div>Add amounts above to see your breakdown</div>
+      <div id="pieReal" style="display:none">
+        <div class="chart-wrap"><canvas id="pieChart" role="img" aria-label="Budget doughnut chart"></canvas></div>
+        <div class="legend" id="pie-legend"></div>
+        <div style="margin-top:14px;padding:12px 14px;background:var(--save-light);border-radius:var(--radius);border-left:3px solid var(--save)">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;font-weight:700;margin-bottom:4px">Savings rate</div>
+          <div id="savings-rate" style="font-size:20px;font-weight:800">0%</div>
+        </div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>Spending by category</h3>
+      <div id="spendEmpty" class="empty-chart"><div class="empty-chart-icon">📊</div>Add expenses to see category breakdown</div>
+      <div id="spendReal" style="display:none">
+        <div class="chart-wrap"><canvas id="spendChart" role="img" aria-label="Spending bar chart"></canvas></div>
+      </div>
+    </div>
+  </div>
+  <div class="goals-card">
+    <h3>Savings goal tracker</h3>
+    <div id="goals-list"></div>
+    <button class="add-goal-btn" onclick="addGoal()">+ Add a savings goal</button>
+  </div>
+</div>
+
+<div class="page" id="page-tips">
+  <div class="tips-hero">
+    <h2>Savings ideas &amp; methods</h2>
+    <p>Personalised tips based on your actual budget data. They update automatically as you track your money.</p>
+  </div>
+  <div class="tips-alert" id="tipsAlert"></div>
+  <div class="tips-grid" id="tipsGrid"></div>
+  <div class="methods-title">Proven budgeting methods</div>
+  <div class="methods-wrap">
+    <div class="method-row"><div class="method-num mn1">1</div><div class="method-body"><h3>Zero-based budgeting</h3><p>Assign every rupee a job until income minus all spending equals zero. Forces intentional decisions each month.</p></div></div>
+    <div class="method-row"><div class="method-num mn2">2</div><div class="method-body"><h3>Envelope method</h3><p>Divide cash into labeled envelopes per category. Once an envelope is empty, spending in that area stops for the month.</p></div></div>
+    <div class="method-row"><div class="method-num mn3">3</div><div class="method-body"><h3>Pay yourself first</h3><p>Move savings out the moment income arrives, then live on what's left. It's the single most effective savings habit.</p></div></div>
+    <div class="method-row"><div class="method-num mn4">4</div><div class="method-body"><h3>Value-based budgeting</h3><p>Rank what genuinely matters, allocate top-down. Spend guilt-free on real priorities and cut the rest.</p></div></div>
+    <div class="method-row"><div class="method-num mn5">5</div><div class="method-body"><h3>Anti-budget (reverse budgeting)</h3><p>Save a fixed percentage first, spend the rest freely without tracking categories. Great for people who hate spreadsheets.</p></div></div>
+  </div>
+</div>
+
+<div class="page" id="page-sheet">
+  <div class="sheet-hero">
+    <h2>Budget spreadsheet</h2>
+    <p>Synced with your dashboard. Track budgeted vs actual, delete individual rows, export to Excel, or print to PDF.</p>
+  </div>
+  <div class="sheet-toolbar">
+    <button onclick="addSheetRow()">+ Add row</button>
+    <button onclick="clearSheet(event)">Clear all</button>
+    <button onclick="exportCSV()">Export CSV</button>
+    <button class="dl-btn" onclick="exportXLSX()">&#8681; Download Excel</button>
+    <button class="print-btn" onclick="window.print()">&#128438; Print / PDF</button>
+  </div>
+  <div class="sheet-wrap">
+    <table class="sheet">
+      <thead>
+        <tr>
+          <th style="width:175px">Category</th>
+          <th style="width:110px">Type</th>
+          <th style="width:120px">Budgeted</th>
+          <th style="width:120px">Actual</th>
+          <th style="width:120px">Difference</th>
+          <th>Note</th>
+          <th style="width:42px"></th>
+        </tr>
+      </thead>
+      <tbody id="sheetBody"></tbody>
+      <tfoot>
+        <tr class="total-row">
+          <td colspan="2">Totals</td>
+          <td class="computed" id="sh-bud-total">0</td>
+          <td class="computed" id="sh-act-total">0</td>
+          <td class="computed" id="sh-diff-total">0</td>
+          <td colspan="2"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<div class="page" id="page-about">
+  <div class="about-hero">
+    <div class="about-avatar">👨‍💻</div>
+    <h1>About BudgetWise</h1>
+    <p>Built by a young finance enthusiast, for people across Asia who want to understand their money without the boring corporate jargon.</p>
+  </div>
+  <div class="about-mission">
+    <h2>Who am I?</h2>
+    <p>I'm a fellow youngster with a keen interest in finance — still learning, still growing, just like you. I built BudgetWise not because I have all the answers, but because I believe the best way to understand money is to work through it together. Everything on this site is something I'm figuring out alongside you, gaining experience as we go. This isn't a product from a big bank or a corporation — it's a real person trying to make budgeting less scary and more accessible for people across Asia.</p>
+  </div>
+  <div class="about-stats">
+    <div class="stat-card"><div class="stat-num">40+</div><div class="stat-lbl">Asian currencies</div></div>
+    <div class="stat-card"><div class="stat-num">100%</div><div class="stat-lbl">Free, always</div></div>
+    <div class="stat-card"><div class="stat-num">0</div><div class="stat-lbl">Data sent to servers</div></div>
+  </div>
+  <div class="about-grid">
+    <div class="about-card"><div class="about-card-icon">🎯</div><h3>What I'm trying to achieve</h3><p>Help everyday people — students, young professionals, families — understand where money goes and make smarter decisions.</p></div>
+    <div class="about-card"><div class="about-card-icon">📚</div><h3>Learning in public</h3><p>Every tip on this site is something I've personally researched. I'm on the same journey as you — just sharing what I learn.</p></div>
+    <div class="about-card"><div class="about-card-icon">🔒</div><h3>Your privacy matters</h3><p>All data stays in your browser's localStorage. Nothing is ever sent to any server. Your finances are entirely your own.</p></div>
+    <div class="about-card"><div class="about-card-icon">🌏</div><h3>Built for Asia</h3><p>Supporting 40+ currencies across South, East, Southeast, Central and West Asia — finance tools should speak your language.</p></div>
+  </div>
+  <h2 style="font-size:17px;font-weight:800;margin-bottom:14px" id="faq">FAQ &amp; How to use</h2>
+  <div class="faq-section">
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)" tabindex="0" onkeydown="if(event.key==='Enter')toggleFaq(this)">How do I add income and expenses? <span class="faq-icon">+</span></div><div class="faq-a">Go to the Dashboard. Click the "+ Add" buttons under each column. Type a label, then an amount. Everything saves automatically. Note: pressing Enter in the label field moves focus to the amount — but pressing Enter in the amount field does nothing, by design, so you don't accidentally trigger anything.</div></div>
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)" tabindex="0" onkeydown="if(event.key==='Enter')toggleFaq(this)">Why does my dashboard entry appear in the Budget Sheet? <span class="faq-icon">+</span></div><div class="faq-a">The Dashboard and Budget Sheet are synced — entries with a label and amount automatically appear in the Sheet so you don't have to enter data twice. This is intentional! To add a Sheet-only row (e.g. for a budgeted amount you haven't spent yet), use "+ Add row" in the Sheet tab.</div></div>
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)" tabindex="0" onkeydown="if(event.key==='Enter')toggleFaq(this)">Does currency switching convert my amounts? <span class="faq-icon">+</span></div><div class="faq-a">No — the currency selector only changes the symbol shown (Rs., ₹, ¥, etc.). Your entered numbers stay the same. Choose your currency before entering amounts, and stick with it for that month.</div></div>
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)" tabindex="0" onkeydown="if(event.key==='Enter')toggleFaq(this)">Will I lose my data if I close the browser? <span class="faq-icon">+</span></div><div class="faq-a">No. Everything saves automatically using your browser's localStorage every time you make a change. It'll be there when you come back — as long as you use the same browser and don't clear your browsing data.</div></div>
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)" tabindex="0" onkeydown="if(event.key==='Enter')toggleFaq(this)">How do I add a new month? <span class="faq-icon">+</span></div><div class="faq-a">Click "+ New month" in the top bar. A dialog appears where you can choose any month and year — not just the current one. Each month keeps completely separate data. Switch between months using the Month dropdown.</div></div>
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)" tabindex="0" onkeydown="if(event.key==='Enter')toggleFaq(this)">How do I delete a row in the Budget Sheet? <span class="faq-icon">+</span></div><div class="faq-a">Every row in the Budget Sheet has a small × button on the right side. Click it to permanently remove that row. To clear all rows at once, click "Clear all" — it will ask you to confirm with a second click before deleting anything.</div></div>
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)" tabindex="0" onkeydown="if(event.key==='Enter')toggleFaq(this)">How do savings goals work? <span class="faq-icon">+</span></div><div class="faq-a">On the Dashboard, click "+ Add a savings goal". Fill in the name, target amount, and how much you've saved so far. A progress bar shows your completion. Update the "Saved so far" number each month to track progress over time.</div></div>
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)" tabindex="0" onkeydown="if(event.key==='Enter')toggleFaq(this)">How do I export my budget? <span class="faq-icon">+</span></div><div class="faq-a">Go to the Budget Sheet tab. Click "Download Excel" for a .xlsx file you can open in Excel or Google Sheets. Click "Export CSV" for a plain text file. Click "Print / PDF" to open your browser's print dialog — choose "Save as PDF" to get a PDF version.</div></div>
+  </div>
+</div>
+</div>
+
+<footer>
+  <div class="footer-links">
+    <a href="#" onclick="gotoFaq();return false">FAQ</a>
+    <a href="#" onclick="gotoFaq();return false">How to use</a>
+    <a href="#" onclick="showPage('about',document.querySelectorAll('.nav-links button')[3]);return false">About</a>
+    <a href="#" onclick="showPage('tips',document.querySelectorAll('.nav-links button')[1]);return false">Savings tips</a>
+  </div>
+  <div class="copy">BudgetWise Asia Edition &nbsp;·&nbsp; All data is private and stored locally in your browser &nbsp;·&nbsp; Free forever</div>
+</footer>
+
+<script>
+const CURRENCIES={
+  NPR:'Rs.',INR:'₹',PKR:'₨',BDT:'৳',LKR:'Rs',BTN:'Nu',MVR:'Rf',AFN:'؋',
+  CNY:'¥',JPY:'¥',KRW:'₩',TWD:'NT$',HKD:'HK$',MNT:'₮',
+  SGD:'S$',MYR:'RM',THB:'฿',IDR:'Rp',PHP:'₱',VND:'₫',MMK:'K',KHR:'៛',LAK:'₭',BND:'B$',
+  KZT:'₸',UZS:"so'm",KGS:'с',TJS:'SM',TMT:'T',
+  AED:'د.إ',SAR:'﷼',QAR:'﷼',KWD:'د.ك',BHD:'.د.ب',OMR:'﷼',JOD:'JD',ILS:'₪',TRY:'₺',IRR:'﷼',IQD:'ع.د',AMD:'֏',GEL:'₾',AZN:'₼'
+};
+const MONTH_NAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
+let sym='Rs.',code='NPR',currentMonth='',allData={};
+let entries={earn:[],spend:[],save:[]},goals=[],sheetRows=[];
+let pieChart=null,spendChart=null;
+
+function fmt(n){return sym+' '+Math.round(n).toLocaleString();}
+
+function saveData(){
+  try{
+    allData[currentMonth]={
+      entries:JSON.parse(JSON.stringify(entries)),
+      goals:JSON.parse(JSON.stringify(goals)),
+      sheetRows:JSON.parse(JSON.stringify(sheetRows))
+    };
+    localStorage.setItem('bw3_data',JSON.stringify(allData));
+    localStorage.setItem('bw3_month',currentMonth);
+    localStorage.setItem('bw3_currency',code);
+  }catch(e){}
+}
+
+function loadData(){
+  try{
+    const raw=localStorage.getItem('bw3_data');
+    if(raw)allData=JSON.parse(raw);
+    const sc=localStorage.getItem('bw3_currency');
+    if(sc&&CURRENCIES[sc]){code=sc;sym=CURRENCIES[code];document.getElementById('currencySelect').value=code;}
+    const sm=localStorage.getItem('bw3_month');
+    if(sm&&allData[sm])currentMonth=sm;
+  }catch(e){}
+}
+
+function getDefault(){
+  return{
+    entries:{
+      earn:[{label:'Salary / wages',amount:''},{label:'Freelance',amount:''}],
+      spend:[{label:'Rent',amount:''},{label:'Groceries',amount:''},{label:'Transport',amount:''}],
+      save:[{label:'Emergency fund',amount:''},{label:'Retirement',amount:''}]
+    },
+    goals:[],
+    sheetRows:[
+      {cat:'Salary / wages',type:'Earning',bud:'',act:'',note:''},
+      {cat:'Freelance income',type:'Earning',bud:'',act:'',note:''},
+      {cat:'Rent / mortgage',type:'Spending',bud:'',act:'',note:''},
+      {cat:'Utilities',type:'Spending',bud:'',act:'',note:''},
+      {cat:'Groceries & food',type:'Spending',bud:'',act:'',note:''},
+      {cat:'Transport / fuel',type:'Spending',bud:'',act:'',note:''},
+      {cat:'Education',type:'Spending',bud:'',act:'',note:''},
+      {cat:'Healthcare',type:'Spending',bud:'',act:'',note:''},
+      {cat:'Entertainment',type:'Spending',bud:'',act:'',note:''},
+      {cat:'Emergency fund',type:'Saving',bud:'',act:'',note:''},
+      {cat:'Retirement / pension',type:'Saving',bud:'',act:'',note:''},
+      {cat:'Investment',type:'Saving',bud:'',act:'',note:''},
+    ]
+  };
+}
+
+function buildMonthOptions(){
+  const sel=document.getElementById('monthSelect');
+  sel.innerHTML='';
+  const now=new Date();
+  if(!Object.keys(allData).length){
+    const lbl=MONTH_NAMES[now.getMonth()]+' '+now.getFullYear();
+    allData[lbl]=getDefault();currentMonth=lbl;
+  }
+  Object.keys(allData).forEach(m=>{
+    const o=document.createElement('option');
+    o.value=m;o.textContent=m;if(m===currentMonth)o.selected=true;
+    sel.appendChild(o);
+  });
+}
+
+function switchMonth(){currentMonth=document.getElementById('monthSelect').value;loadMonthData();renderAll();}
+
+function openMonthModal(){
+  const now=new Date();
+  document.getElementById('modalMonth').value=MONTH_NAMES[now.getMonth()];
+  document.getElementById('modalYear').value=now.getFullYear();
+  document.getElementById('monthModal').classList.add('open');
+}
+function closeMonthModal(){document.getElementById('monthModal').classList.remove('open');}
+function confirmAddMonth(){
+  const m=document.getElementById('modalMonth').value;
+  const y=document.getElementById('modalYear').value;
+  let lbl=m+' '+y,i=2;
+  while(allData[lbl]){lbl=m+' '+y+' ('+i+')';i++;}
+  allData[lbl]=getDefault();currentMonth=lbl;
+  buildMonthOptions();loadMonthData();renderAll();saveData();closeMonthModal();
+}
+
+function loadMonthData(){
+  if(!allData[currentMonth])allData[currentMonth]=getDefault();
+  const d=allData[currentMonth];
+  entries=JSON.parse(JSON.stringify(d.entries));
+  goals=JSON.parse(JSON.stringify(d.goals||[]));
+  sheetRows=JSON.parse(JSON.stringify(d.sheetRows));
+}
+
+function setCurrency(){
+  code=document.getElementById('currencySelect').value;
+  sym=CURRENCIES[code];
+  saveData();renderAll();
+}
+
+// ── ENTRIES (FIX 1: Enter key doesn't chain past amount) ──
+function renderEntries(type){
+  const c=document.getElementById(type+'-entries');
+  c.innerHTML='';
+  entries[type].forEach((e,i)=>{
+    const row=document.createElement('div');
+    row.className='entry-row';
+
+    const lbl=document.createElement('input');
+    lbl.type='text';lbl.placeholder='Label';lbl.value=e.label||'';
+    lbl.addEventListener('input',()=>{entries[type][i].label=lbl.value;saveData();});
+    lbl.addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();amt.focus();}});
+
+    const amt=document.createElement('input');
+    amt.type='number';amt.placeholder='0';amt.min='0';amt.value=e.amount||'';
+    amt.style.maxWidth='95px';
+    amt.addEventListener('input',()=>{entries[type][i].amount=amt.value;updateTotals();saveData();});
+    amt.addEventListener('keydown',ev=>{if(ev.key==='Enter')ev.preventDefault();});// FIX: block chain
+
+    const del=document.createElement('button');
+    del.className='del-btn';del.innerHTML='&#215;';del.setAttribute('aria-label','Delete');
+    del.addEventListener('click',()=>deleteEntry(type,i));
+
+    row.appendChild(lbl);row.appendChild(amt);row.appendChild(del);
+    c.appendChild(row);
+  });
+}
+
+function addEntry(type){entries[type].push({label:'',amount:''});renderEntries(type);saveData();}
+function deleteEntry(type,i){entries[type].splice(i,1);renderEntries(type);updateTotals();saveData();}
+function sum(type){return entries[type].reduce((a,e)=>a+(parseFloat(e.amount)||0),0);}
+
+// ── CHARTS ──
+function initCharts(){
+  const pc=document.getElementById('pieChart').getContext('2d');
+  pieChart=new Chart(pc,{
+    type:'doughnut',
+    data:{labels:['Earnings','Spending','Saving'],datasets:[{data:[33,33,34],backgroundColor:['#8B5CF6','#F43F5E','#10B981'],hoverBackgroundColor:['#6D28D9','#BE123C','#065F46'],borderWidth:4,borderColor:'#fff',hoverOffset:10}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{animateRotate:true,animateScale:true,duration:700},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.raw)},backgroundColor:'rgba(24,24,27,0.88)',padding:10,cornerRadius:8}},cutout:'58%'}
+  });
+  const sc=document.getElementById('spendChart').getContext('2d');
+  spendChart=new Chart(sc,{
+    type:'bar',
+    data:{labels:[],datasets:[{label:'Amount',data:[],backgroundColor:['#F43F5E','#F59E0B','#8B5CF6','#10B981','#EC4899','#06B6D4','#84CC16','#F97316','#6366F1','#14B8A6'],borderRadius:6,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:500},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.raw)},backgroundColor:'rgba(24,24,27,0.88)',padding:10,cornerRadius:8}},scales:{x:{ticks:{autoSkip:false,maxRotation:35,font:{size:11}},grid:{display:false}},y:{ticks:{callback:v=>sym+' '+Math.round(v).toLocaleString(),font:{size:11}},grid:{color:'rgba(0,0,0,0.04)'}}}}
+  });
+}
+
+// ── GOALS (FIX 5: no re-render on every keystroke) ──
+function renderGoals(){
+  const c=document.getElementById('goals-list');
+  if(!goals.length){c.innerHTML='<div style="font-size:13px;color:var(--text3);padding:6px 0;text-align:center">No goals yet — add one to start tracking your progress!</div>';return;}
+  c.innerHTML='';
+  goals.forEach((g,i)=>{
+    const pct=g.target>0?Math.min(100,Math.round((g.saved/g.target)*100)):0;
+    const color=pct>=100?'var(--save)':pct>=50?'var(--accent)':'var(--earn)';
+    const div=document.createElement('div');div.className='goal-item';
+    div.innerHTML=`
+      <div class="goal-top"><span class="goal-name-display">${g.name||'Unnamed goal'}</span><span class="goal-amounts">${fmt(g.saved||0)} / ${fmt(g.target||0)}</span></div>
+      <div class="goal-bar-bg"><div class="goal-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+      <div class="goal-pct">${pct}% complete${pct>=100?' 🎉':''}</div>
+      <div class="goal-fields">
+        <input type="text" placeholder="Goal name" value="${g.name||''}" data-gi="${i}" data-gf="name">
+        <input type="number" placeholder="Target" min="0" value="${g.target||''}" data-gi="${i}" data-gf="target">
+        <input type="number" placeholder="Saved so far" min="0" value="${g.saved||''}" data-gi="${i}" data-gf="saved">
+        <button class="goal-del" onclick="deleteGoal(${i})">&#215;</button>
+      </div>`;
+    c.appendChild(div);
+  });
+  c.querySelectorAll('.goal-fields input').forEach(inp=>{
+    inp.addEventListener('input',()=>{
+      const gi=parseInt(inp.dataset.gi),gf=inp.dataset.gf;
+      if(gf==='name'){
+        goals[gi].name=inp.value;
+        inp.closest('.goal-item').querySelector('.goal-name-display').textContent=inp.value||'Unnamed goal';
+      } else {
+        goals[gi][gf]=parseFloat(inp.value)||0;
+        const item=inp.closest('.goal-item');
+        const tgt=goals[gi].target||0,sv=goals[gi].saved||0;
+        const p=tgt>0?Math.min(100,Math.round(sv/tgt*100)):0;
+        const cl=p>=100?'var(--save)':p>=50?'var(--accent)':'var(--earn)';
+        item.querySelector('.goal-bar-fill').style.cssText='width:'+p+'%;background:'+cl;
+        item.querySelector('.goal-amounts').textContent=fmt(sv)+' / '+fmt(tgt);
+        item.querySelector('.goal-pct').textContent=p+'% complete'+(p>=100?' 🎉':'');
+      }
+      saveData();
+    });
+  });
+}
+function addGoal(){goals.push({name:'',target:0,saved:0});renderGoals();saveData();}
+function deleteGoal(i){goals.splice(i,1);renderGoals();saveData();}
+
+// ── TOTALS ──
+function updateTotals(){
+  const e=sum('earn'),s=sum('spend'),sv=sum('save');
+  ['earn','spend','save'].forEach(t=>{document.getElementById(t+'-total').textContent=fmt(sum(t));});
+  document.getElementById('sum-earn').textContent=fmt(e);
+  document.getElementById('sum-spend').textContent=fmt(s);
+  const net=e-s-sv;
+  const nel=document.getElementById('sum-net');
+  nel.textContent=fmt(net);nel.style.color=net>=0?'var(--save-dark)':'var(--spend-dark)';
+
+  const banner=document.getElementById('alertBanner');
+  if(s>e&&e>0){document.getElementById('alertText').textContent='Warning: spending ('+fmt(s)+') exceeds income ('+fmt(e)+') this month!';banner.classList.add('show');}
+  else banner.classList.remove('show');
+
+  const has=e>0||s>0||sv>0;
+  document.getElementById('pieEmpty').style.display=has?'none':'flex';
+  document.getElementById('pieReal').style.display=has?'block':'none';
+  document.getElementById('spendEmpty').style.display=s>0?'none':'flex';
+  document.getElementById('spendReal').style.display=s>0?'block':'none';
+
+  if(has&&pieChart){
+    pieChart.data.datasets[0].data=[e||0.001,s||0.001,sv||0.001];pieChart.update();
+    const tot=e+s+sv||1;
+    document.getElementById('pie-legend').innerHTML=[{c:'#8B5CF6',l:'Earnings',v:e},{c:'#F43F5E',l:'Spending',v:s},{c:'#10B981',l:'Saving',v:sv}]
+      .map(x=>'<div class="legend-item"><div class="legend-pill" style="background:'+x.c+'"></div><span>'+x.l+' — '+fmt(x.v)+' ('+Math.round(x.v/tot*100)+'%)</span></div>').join('');
+    const rate=e>0?Math.round(sv/e*100):0;
+    const rEl=document.getElementById('savings-rate');
+    rEl.textContent=rate+'%';rEl.style.color=rate>=20?'var(--save-dark)':rate>=10?'#B45309':'var(--spend-dark)';
+  }
+  if(s>0&&spendChart){
+    const f=entries.spend.filter(x=>parseFloat(x.amount)>0);
+    spendChart.data.labels=f.map(x=>x.label||'Unnamed');
+    spendChart.data.datasets[0].data=f.map(x=>parseFloat(x.amount));
+    spendChart.update();
+  }
+  updateTips(e,s,sv);
+}
+
+// ── TIPS (10 tips) ──
+function updateTips(earn,spend,save){
+  const rate=earn>0?Math.round(save/earn*100):0;
+  const spPct=earn>0?Math.round(spend/earn*100):0;
+  const al=document.getElementById('tipsAlert');
+  if(earn>0&&spend>earn){al.textContent='Your spending exceeds your income. The highlighted tips below are most important for you right now.';al.classList.add('show');}
+  else if(earn>0&&rate<10){al.textContent='Savings rate: '+rate+'%. The goal is 20%+ — the tips below can help you get there.';al.classList.add('show');}
+  else al.classList.remove('show');
+
+  const tips=[
+    {badge:'50/30/20',title:'The 50/30/20 rule',text:'Needs 50%, wants 30%, savings 20%. A simple baseline that works at any income level across any Asian country.',highlight:rate<20&&earn>0,b:'#F5F3FF',bc:'#5B21B6'},
+    {badge:'Automate it',title:'Automate your savings',text:'Set a recurring bank transfer on payday. Saving before you spend removes temptation — and it works better than willpower.',highlight:rate<10&&earn>0,b:'#FFFBEB',bc:'#92400E'},
+    {badge:'Track it',title:'Log every expense',text:'Small daily purchases add up to thousands each month. Seeing them is the first — and most powerful — step to controlling them.',highlight:spend>earn,b:'#FFF1F3',bc:'#9F1239'},
+    {badge:'Set goals',title:'Set specific savings goals',text:'Saving for a trip, laptop, or wedding is 3x more motivating than vague saving. Name the goal, put a number on it, track it here.',highlight:false,b:'#ECFDF5',bc:'#065F46'},
+    {badge:'Cut subs',title:'Audit subscriptions',text:'Go through your last 3 months of bank statements. Cancel anything you haven\'t used recently. Most people find easy savings here.',highlight:spPct>60,b:'#FDF2F8',bc:'#831843'},
+    {badge:'Emergency',title:'Build a cash buffer first',text:'Before investing anything, build 3–6 months of expenses in a liquid savings account. This prevents you from taking on debt in a crisis.',highlight:rate<5&&earn>0,b:'#EFF6FF',bc:'#1E40AF'},
+    {badge:'Debt attack',title:'Tackle high-interest debt',text:'Credit card and personal loan rates are often 18–36%. Paying these off is a guaranteed return — better than most investments.',highlight:false,b:'#FFF7ED',bc:'#9A3412'},
+    {badge:'Side hustle',title:'Build a second income',text:'Even a small freelance income — tutoring, design, delivery — can dramatically change what you\'re able to save each month.',highlight:earn>0&&save===0,b:'#F0FDF4',bc:'#14532D'},
+    {badge:'Start investing',title:'Invest early, even small',text:'5% of income monthly into index funds or SIPs compounds enormously over 10+ years. Time matters more than the amount you start with.',highlight:rate>=20,b:'#F5F3FF',bc:'#4C1D95'},
+    {badge:'Monthly review',title:'Do a monthly money check-in',text:'15 minutes at month-end comparing plan vs reality closes the gap faster than any other habit. Use your Sheet page for this.',highlight:false,b:'#F4F4F8',bc:'#3F3F46'},
+  ];
+  document.getElementById('tipsGrid').innerHTML=tips.map(t=>
+    '<div class="tip-card'+(t.highlight?' highlight':'')+'"><div class="tip-badge" style="background:'+t.b+';color:'+t.bc+'">'+t.badge+'</div><h3>'+t.title+'</h3><p>'+t.text+'</p></div>'
+  ).join('');
+}
+
+// ── SHEET (FIX 3,4: clearSheet double-click confirm; FIX 4: spending diff logic; new delete row) ──
+function syncSheetFromDash(){
+  const tmap={earn:'Earning',spend:'Spending',save:'Saving'};
+  ['earn','spend','save'].forEach(t=>{
+    entries[t].forEach(e=>{
+      if(!e.label)return;
+      const ex=sheetRows.find(r=>r.type===tmap[t]&&r.cat===e.label);
+      if(ex)ex.act=e.amount||'';
+      else sheetRows.push({cat:e.label,type:tmap[t],bud:'',act:e.amount||'',note:''});
+    });
+  });
+  renderSheet();
+}
+
+function renderSheet(){
+  const tbody=document.getElementById('sheetBody');
+  tbody.innerHTML='';
+  sheetRows.forEach((row,i)=>{
+    const bud=parseFloat(row.bud)||0,act=parseFloat(row.act)||0;
+    // FIX 4: Spending diff = bud-act (positive=under budget=good). Earn/Save = act-bud.
+    let diff=row.type==='Spending'?bud-act:act-bud;
+    const dc=diff>0?'var(--save-dark)':diff<0?'var(--spend-dark)':'var(--text3)';
+    const cls=row.type==='Earning'?'tr-earn':row.type==='Saving'?'tr-save':'tr-spend';
+    const tr=document.createElement('tr');tr.className=cls;
+    const diffTxt=diff!==0?(diff>0?'+':'')+Math.round(diff).toLocaleString():'—';
+    tr.innerHTML=`
+      <td><input value="${row.cat||''}" oninput="sheetRows[${i}].cat=this.value;saveData()"></td>
+      <td><select onchange="sheetRows[${i}].type=this.value;renderSheet();saveData()">
+        ${['Earning','Spending','Saving'].map(tp=>'<option'+(row.type===tp?' selected':'')+'>'+tp+'</option>').join('')}
+      </select></td>
+      <td><input type="number" min="0" value="${row.bud||''}" placeholder="0" oninput="sheetRows[${i}].bud=this.value;updateSheetTotals();saveData()"></td>
+      <td><input type="number" min="0" value="${row.act||''}" placeholder="0" oninput="sheetRows[${i}].act=this.value;updateSheetTotals();saveData()"></td>
+      <td class="computed" style="color:${dc}">${diffTxt}</td>
+      <td><input value="${row.note||''}" placeholder="—" oninput="sheetRows[${i}].note=this.value;saveData()"></td>
+      <td><button class="row-del" onclick="deleteSheetRow(${i})" title="Remove row">&#215;</button></td>`;
+    tbody.appendChild(tr);
+  });
+  updateSheetTotals();
+}
+
+function deleteSheetRow(i){sheetRows.splice(i,1);renderSheet();saveData();}
+
+function updateSheetTotals(){
+  const bud=sheetRows.reduce((a,r)=>a+(parseFloat(r.bud)||0),0);
+  const act=sheetRows.reduce((a,r)=>a+(parseFloat(r.act)||0),0);
+  const diff=act-bud;
+  document.getElementById('sh-bud-total').textContent=Math.round(bud).toLocaleString()+' '+code;
+  document.getElementById('sh-act-total').textContent=Math.round(act).toLocaleString()+' '+code;
+  const el=document.getElementById('sh-diff-total');
+  el.textContent=(diff>=0?'+':'')+Math.round(diff).toLocaleString()+' '+code;
+  el.style.color=diff>=0?'var(--save-dark)':'var(--spend-dark)';
+}
+
+function addSheetRow(){sheetRows.push({cat:'',type:'Spending',bud:'',act:'',note:''});renderSheet();saveData();}
+
+// FIX 3: Double-click confirm instead of confirm() dialog
+function clearSheet(ev){
+  const btn=ev.currentTarget;
+  if(btn.dataset.confirm==='1'){
+    sheetRows=[];renderSheet();saveData();
+    btn.textContent='Clear all';btn.style.cssText='';btn.dataset.confirm='';
+  } else {
+    btn.textContent='Tap again to confirm';btn.style.cssText='background:var(--spend);color:#fff;border-color:var(--spend)';btn.dataset.confirm='1';
+    setTimeout(()=>{btn.textContent='Clear all';btn.style.cssText='';btn.dataset.confirm='';},3000);
+  }
+}
+
+function exportCSV(){
+  const hdr='Category,Type,Budgeted ('+code+'),Actual ('+code+'),Difference,Note\n';
+  const rows=sheetRows.map(r=>{
+    const d=(parseFloat(r.act)||0)-(parseFloat(r.bud)||0);
+    return['"'+(r.cat||'')+'"',r.type,r.bud||0,r.act||0,Math.round(d),'"'+(r.note||'')+'"'].join(',');
+  }).join('\n');
+  const blob=new Blob([hdr+rows],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='BudgetWise_'+currentMonth.replace(/\s+/g,'_')+'_'+code+'.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+}
+
+function exportXLSX(){
+  const hdr=[['BudgetWise — '+currentMonth+' ('+code+')'],[''],['Category','Type','Budgeted ('+code+')','Actual ('+code+')','Difference','Note']];
+  const rows=sheetRows.map(r=>{const d=(parseFloat(r.act)||0)-(parseFloat(r.bud)||0);return[r.cat||'',r.type,parseFloat(r.bud)||0,parseFloat(r.act)||0,Math.round(d),r.note||''];});
+  const tb=sheetRows.reduce((a,r)=>a+(parseFloat(r.bud)||0),0);
+  const ta=sheetRows.reduce((a,r)=>a+(parseFloat(r.act)||0),0);
+  const ws=XLSX.utils.aoa_to_sheet([...hdr,...rows,[''],['','TOTAL',Math.round(tb),Math.round(ta),Math.round(ta-tb),'']]);
+  ws['!cols']=[{wch:28},{wch:12},{wch:18},{wch:18},{wch:14},{wch:20}];
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Budget');
+  XLSX.writeFile(wb,'BudgetWise_'+currentMonth.replace(/\s+/g,'_')+'_'+code+'.xlsx');
+}
+
+// ── NAV ──
+function showPage(name,btn,isMobile){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  if(!isMobile){document.querySelectorAll('.nav-links button').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');}
+  document.querySelectorAll('.mob-btn').forEach(b=>b.classList.toggle('active',b.dataset.page===name));
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function toggleMobileMenu(){const nl=document.querySelector('.nav-links');nl.style.display=nl.style.display==='flex'?'none':'flex';}
+function toggleFaq(el){el.classList.toggle('open');el.nextElementSibling.classList.toggle('open');}
+function gotoFaq(){showPage('about',document.querySelectorAll('.nav-links button')[3]);setTimeout(()=>document.getElementById('faq').scrollIntoView({behavior:'smooth'}),300);}
+
+function renderAll(){
+  ['earn','spend','save'].forEach(renderEntries);
+  updateTotals();renderGoals();syncSheetFromDash();
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  loadData();buildMonthOptions();loadMonthData();initCharts();renderAll();
+  if(!sum('earn')&&!sum('spend')&&!sum('save'))document.getElementById('welcomeState').style.display='block';
+  document.getElementById('monthModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeMonthModal();});
+});
+</script>
+</body>
+</html>
